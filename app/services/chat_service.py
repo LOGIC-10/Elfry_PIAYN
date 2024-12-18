@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .database_service import get_model_config
 from ..db.database import Conversation
 from typing import List
-from ..api.chat import Message
+from ..api.schemas import Message
 
 async def process_chat(db: Session, user_id: int, messages: List[Message], model_name: str = "gpt-4o-mini"):
     # Get model configuration

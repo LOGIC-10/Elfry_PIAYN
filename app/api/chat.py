@@ -2,20 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..db.database import get_db
 from ..services.chat_service import process_chat
-from typing import Optional, List, Dict
-from pydantic import BaseModel
-
-class Message(BaseModel):
-    role: str
-    content: str
-    tool_calls: Optional[List[Dict]] = None
-    tool_call_id: Optional[str] = None
-    name: Optional[str] = None
-
-class ChatRequest(BaseModel):
-    user_id: int
-    messages: List[Message]
-    model_name: Optional[str] = "gpt-4o-mini"
+from ..db.schemas import ChatRequest
 
 router = APIRouter()
 

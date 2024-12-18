@@ -1,18 +1,25 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from ..services.tools_service import search, webscraper, calculate
 
-router = APIRouter()
+router = APIRouter(prefix="/tools")
 
 @router.get("/search")
 async def search_tool(query: str):
-    # 实现搜索工具的逻辑
-    return {"result": f"Search results for {query}"}
+    result = await search(query)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
 
-@router.get("/webscraper")
+@router.get("/webscraper") 
 async def webscraper_tool(url: str):
-    # 实现网页爬取工具的逻辑
-    return {"result": f"Scraped data from {url}"}
+    result = await webscraper(url)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
 
 @router.get("/calculate")
 async def calculate_tool(expression: str):
-    # 实现计算工具的逻辑
-    return {"result": eval(expression)}
+    result = await calculate(expression)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result

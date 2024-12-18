@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from ..db.database import get_db, User, Tool, Conversation, ModelsAPI
 
-router = APIRouter()
+router = APIRouter(prefix="/database")
 
 @router.get("/conversations")
 async def get_conversations(user_id: int, db: Session = Depends(get_db)):
