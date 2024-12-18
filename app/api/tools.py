@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from ..services.tools_service import search, webscraper, calculate
 
-router = APIRouter(prefix="/tools")
+# 移除 prefix，因为已经在 main.py 中定义了
+router = APIRouter()
 
 @router.get("/search")
 async def search_tool(query: str):

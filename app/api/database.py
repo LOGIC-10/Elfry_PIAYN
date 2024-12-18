@@ -1,10 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 from ..db.database import get_db, User, Tool, Conversation, ModelsAPI
+from pydantic import BaseModel
 
-router = APIRouter(prefix="/database")
+# 移除 prefix，因为已经在 main.py 中定义了
+router = APIRouter()
+
+# 添加请求模型
+class ModelCreate(BaseModel):
+    model_name: str
+    provider: str
+    api_key: str
+    base_url: Optional[str] = None
+    config: Optional[Dict] = None
 
 @router.get("/conversations")
 async def get_conversations(user_id: int, db: Session = Depends(get_db)):
@@ -38,32 +48,26 @@ async def get_models(db: Session = Depends(get_db)):
     models = db.query(ModelsAPI).filter(ModelsAPI.is_active == True).all()
     return {"models": models}
 
-@router.post("/models")
+@router.post("/models/")
 async def create_model(
-    model_name: str,
-    provider: str,
-    api_key: str,
-    base_url: Optional[str] = None,
-    expire_time: Optional[datetime] = None,
-    config: Optional[dict] = None,
+    model: ModelCreate,
     db: Session = Depends(get_db)
 ):
-    model = ModelsAPI(
-        model_name=model_name,
-        provider=provider,
-        api_key=api_key,
-        base_url=base_url,
-        expire_time=expire_time,
-        config=config
+    db_model = ModelsAPI(
+        model_name=model.model_name,
+        provider=model.provider,
+        api_key=model.api_key,
+        base_url=model.base_url,
+        config=model.config
     )
-    db.add(model)
+    db.add(db_model)
     try:
         db.commit()
-        db.refresh(model)
+        db.refresh(db_model)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Error creating model API entry")
-    return {"status": "Model API created", "model": model}
+    return {"status": "Model API created", "model": db_model}
 
 @router.put("/models/{model_id}")
 async def update_model(

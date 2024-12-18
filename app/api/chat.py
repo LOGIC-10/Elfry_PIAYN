@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..db.database import get_db
 from ..services.chat_service import process_chat
-from ..db.schemas import ChatRequest
+from .schemas import ChatRequest
 
 router = APIRouter()
 
-@router.post("/")
+# 修改路由路径，使用明确的路径
+@router.post("")  # 或者使用 "/"
 async def chat(
     request: ChatRequest,
     db: Session = Depends(get_db)
