@@ -48,26 +48,20 @@ async def get_models(db: Session = Depends(get_db)):
     models = db.query(ModelsAPI).filter(ModelsAPI.is_active == True).all()
     return {"models": models}
 
-@router.post("/models/")
+@router.post("/models")  # 改回没有尾部斜杠的版本
 async def create_model(
-    model: ModelCreate,
+    model: ModelCreate,  # 使用 Pydantic 模型验证请求体
     db: Session = Depends(get_db)
 ):
-    db_model = ModelsAPI(
-        model_name=model.model_name,
-        provider=model.provider,
-        api_key=model.api_key,
-        base_url=model.base_url,
-        config=model.config
-    )
+    db_model = ModelsAPI(**model.dict())  # 解包模型数据
     db.add(db_model)
     try:
         db.commit()
         db.refresh(db_model)
+        return {"status": "success", "model": db_model}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Error creating model API entry")
-    return {"status": "Model API created", "model": db_model}
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.put("/models/{model_id}")
 async def update_model(
