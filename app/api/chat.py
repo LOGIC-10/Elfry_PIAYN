@@ -6,8 +6,7 @@ from .schemas import ChatRequest
 
 router = APIRouter()
 
-# 修改路由路径，使用明确的路径
-@router.post("")  # 或者使用 "/"
+@router.post("/")  # 改为明确的斜杠
 async def chat(
     request: ChatRequest,
     db: Session = Depends(get_db)

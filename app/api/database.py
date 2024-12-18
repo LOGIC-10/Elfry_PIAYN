@@ -23,7 +23,7 @@ class UserCreate(BaseModel):
 @router.get("/conversations")
 async def get_conversations(user_id: int, db: Session = Depends(get_db)):
     conversations = db.query(Conversation).filter(Conversation.user_id == user_id).all()
-    return {"conversations": conversations}
+    return {"conversations": conversations} 
 
 @router.get("/tools")
 async def get_tools(db: Session = Depends(get_db)):
