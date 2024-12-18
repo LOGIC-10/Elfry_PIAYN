@@ -7,7 +7,7 @@ from typing import get_type_hints
 
 logger = logging.getLogger(__name__)
 
-class Tool:
+class ToolSchema:
     @staticmethod
     def create_schema_from_function(func: Callable) -> Dict:
         """Create OpenAI tool schema from function signature"""

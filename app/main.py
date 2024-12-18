@@ -14,6 +14,7 @@ app.include_router(database.router, prefix="/database", tags=["database"])
 async def startup_event():
     db = SessionLocal()
     try:
+        # 每次启动服务的时候，初始化工具
         ToolManager.initialize_tools(db)
     finally:
         db.close()
