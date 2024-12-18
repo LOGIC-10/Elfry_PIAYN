@@ -37,6 +37,16 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
     # Create chat completion with tools
     formatted_messages = [msg.dict(exclude_none=True) for msg in messages]
     
+    def serialize_tool_call(tool_call):
+        return {
+            "id": tool_call.id,
+            "type": tool_call.type,
+            "function": {
+                "name": tool_call.function.name,
+                "arguments": tool_call.function.arguments
+            }
+        }
+    
     while True:
         completion = client.chat.completions.create(
             model=model_name,
@@ -47,15 +57,16 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
         response = completion.choices[0].message
         logger.info(f"\n\nModel response: {response.content}")  
 
-        # 先将模型的响应添加到消息列表中
+        # 先将模型的响应添加到消息列表中，并序列化 tool_calls
         formatted_messages.append({
             "role": "assistant",
             "content": response.content if response.content else None,
-            "tool_calls": response.tool_calls if response.tool_calls else None
+            "tool_calls": [serialize_tool_call(tc) for tc in response.tool_calls] if response.tool_calls else None
         })
         
         # If no tool calls, break the loop
         if not response.tool_calls:
+
             break
 
         # Process tool calls
@@ -93,13 +104,17 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         "content": f"Error: {str(e)}"
                     })
 
+    # 确保 response 和 formatted_messages 中的所有对象都是可序列化的
+    serializable_response = response.model_dump()
+    serializable_formatted_messages = formatted_messages  # 已经在上面序列化过
+
     # Store final conversation with all messages
     conversation = Conversation(
         user_id=user_id,
         request_data={"messages": [msg.dict() for msg in messages], "model": model_name},
         response_data={
-            "response": response.model_dump(),
-            "messages": formatted_messages  # Store all messages including tool interactions
+            "response": serializable_response,
+            "messages": serializable_formatted_messages  # Store all messages including tool interactions
         }
     )
     db.add(conversation)
