@@ -31,13 +31,23 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
         base_url=model_config.base_url if model_config.base_url else None
     )
 
+    # Get available tools and their schemas
+    available_tools = []
+    for tool_name in ToolManager.get_available_tools():
+        tool_method = ToolManager.get_tool(tool_name)
+        if tool_method:
+            tool_schemas = ToolManager.get_or_create_tool_schema(tool_method)
+            available_tools.extend(tool_schemas)
+
+    # Create chat completion with tools
     formatted_messages = [msg.dict(exclude_none=True) for msg in messages]
     conversation_history = []
 
     while True:
         completion = client.chat.completions.create(
             model=model_name,
-            messages=formatted_messages
+            messages=formatted_messages,
+            tools=available_tools  # Add tools parameter
         )
         
         response = completion.choices[0].message

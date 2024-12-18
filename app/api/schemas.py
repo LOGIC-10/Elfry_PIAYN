@@ -1,6 +1,6 @@
-
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
+from datetime import datetime
 
 class Message(BaseModel):
     """A Pydantic model representing a message in a conversation.
@@ -54,3 +54,21 @@ class ChatRequest(BaseModel):
     user_id: int
     messages: List[Message]
     model_name: Optional[str] = "gpt-4o-mini"
+
+class ToolCreate(BaseModel):
+    name: str = Field(..., max_length=255)
+    return_char_limit: int = Field(default=6000)
+    description: str
+    tags: List[str] = Field(default_factory=lambda: ["base"])
+    source_type: Optional[str]
+    json_schema: Dict
+    source_code: Optional[str]
+
+class ToolResponse(ToolCreate):
+    id: int
+    create_time: datetime
+    updated_at: datetime
+    is_deleted: bool = False
+
+    class Config:
+        from_attributes = True

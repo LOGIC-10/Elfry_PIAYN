@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, JSON, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, JSON, Boolean, Text, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -21,10 +21,16 @@ class Tool(Base):
     __tablename__ = "tools"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    description = Column(String)
-    parameters = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    name = Column(String(255), unique=True, nullable=False, index=True)
+    return_char_limit = Column(Integer, default=6000)
+    description = Column(Text, nullable=False)
+    tags = Column(JSON, default=lambda: ["base"])
+    source_type = Column(String(50))
+    json_schema = Column(JSON, nullable=False)
+    source_code = Column(Text)
+    create_time = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, default=False)
 
 class Conversation(Base):
     __tablename__ = "conversations"
