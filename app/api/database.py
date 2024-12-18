@@ -16,6 +16,10 @@ class ModelCreate(BaseModel):
     base_url: Optional[str] = None
     config: Optional[Dict] = None
 
+class UserCreate(BaseModel):
+    username: str
+    phone: str
+
 @router.get("/conversations")
 async def get_conversations(user_id: int, db: Session = Depends(get_db)):
     conversations = db.query(Conversation).filter(Conversation.user_id == user_id).all()
@@ -32,16 +36,22 @@ async def get_users(db: Session = Depends(get_db)):
     return {"users": users}
 
 @router.post("/users")
-async def create_user(username: str, phone: str, db: Session = Depends(get_db)):
-    user = User(username=username, phone=phone)
-    db.add(user)
+async def create_user(
+    user: UserCreate,  # 修改为使用请求体
+    db: Session = Depends(get_db)
+):
+    db_user = User(
+        username=user.username,
+        phone=user.phone
+    )
+    db.add(db_user)
     try:
         db.commit()
-        db.refresh(user)
+        db.refresh(db_user)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Username or phone already exists")
-    return {"status": "User created", "user": user}
+    return {"status": "User created", "user": db_user}
 
 @router.get("/models")
 async def get_models(db: Session = Depends(get_db)):
