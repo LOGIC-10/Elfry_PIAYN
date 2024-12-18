@@ -1,43 +1,27 @@
 from fastapi import APIRouter
+from openai import OpenAI
 
 router = APIRouter()
 
 @router.post("/")
 async def chat(user_id: int, message: str):
-    # 调用 OpenAI API 的逻辑
-    # 要求的可以接受的请求格式是这样的 ：
-# """        curl 
-#     -H "Content-Type: application/json" \
-#     -d '{
-#         "model": "gpt-4o-mini", # 这里用户可以传入model来选择不同的模型
-#         "messages": [
-#         {
-#             "role": "system",
-#             "content": "You are a helpful assistant."
-#         },
-#         {
-#             "role": "user",
-#             "content": "Hello!"
-#         }
-#         ]
-#     }'
-# """
-    # 或者也可以接受更复杂的tool call的方法上面请求体中的messages可以是下面这样的：
-    # messages = [{'role': 'user', 'content': '法国总理现在是谁'}, {'role': 'assistant', 'tool_calls': [{'function': {'arguments': '{"query":["法国总理现在是谁","当前法国总理","法国总理"]}', 'name': 'search'}, 'id': 'call_uXOaHdNeRnoILKtPvNtr0pYq', 'type': 'function'}]}, {'role': 'tool', 'tool_call_id': 'call_uXOaHdNeRnoILKtPvNtr0pYq', 'name': 'search', 'content': '{\'法国总理现在是谁\': \'\\nQuery: 法国总理现在是谁\\nSearch Results:\\n--------------------------------------------------\\n[1]:\\nTITLE: 马克龙新任命总理终于来了，他是谁？_腾讯新闻\\nURL: https://news.qq.com/rain/a/20241214A01KDY00\\nCONTENT: 01 法国总统埃马纽埃尔-马克龙在一周时间内任命73岁的弗朗索瓦·贝鲁为新总理。 02 贝鲁曾多次为马蒂尼翁所提及，但从未被任命过，如今终于执掌 ...\\n--------------------------------------------------\\n[2]:\\nTITLE: 马克龙任命前司法部长弗朗索瓦·贝鲁为新总理 - Rfi\\nURL: https://www.rfi.fr/cn/法国/20241213-马克龙任命前司法部长弗朗索瓦·贝鲁为新总理\\nCONTENT: 爱丽舍宫当天发表声明称："共和国总统已任命弗朗索瓦·贝鲁先生为总理，并责成他组建政府"。作为马克龙的主要盟友和中间派人物，法国民主 ...\\n--------------------------------------------------\\n[3]:\\nTITLE: 法国总理列表 - 维基百科，自由的百科全书\\nURL: https://zh.wikipedia.org/wiki/法国总理列表\\nCONTENT: 法国总理（法語：Premier ministre français），為法兰西第五共和国 政府首脑（国家元首是法国总统）。 在不同的历史时期，法国政府首脑的称呼也各不相同。在法兰西第三、第四共和国时期，政府首脑称作部长会议主席（Président du Conseil des Ministres，简称会议主席，Président du Conseil）。\\n--------------------------------------------------\\n[4]:\\nTITLE: 法国总统马克龙将于周五任命新总理 | 新闻 | 半岛电视台\\nURL: https://chinese.aljazeera.net/news/2024/12/13/法国总统马克龙将于周五任命新总理\\nCONTENT: 法国总统办公室表示，米歇尔·巴尼耶上周辞职后，将于周五上午任命新总理。 ... 新任总理将接替米歇尔·巴尼耶。巴尼耶上周辞职，原因是极右翼和左翼议员投票推翻了他的政府，使法国陷入六个月内第二次重大政治危机。 ...\\n--------------------------------------------------\\n[5]:\\nTITLE: 马克龙任命新总理 贝鲁能否成功破局？|马克龙|法国|极右翼_新浪新闻\\nURL: https://news.sina.com.cn/o/2024-12-13/doc-incziqvr5729997.shtml\\nCONTENT: 当地时间12月13日，法国总统马克龙任命弗朗索瓦·贝鲁为新一任总理，以接替其前任米歇尔·巴尼耶。 马克龙于5日接受前总理巴尼耶的辞呈，巴尼耶 ...\\n--------------------------------------------------\\n[6]:\\nTITLE: 马克龙任命今年第四位法国总理 | Radio-Canada.ca\\nURL: https://ici.radio-canada.ca/rci/zh-hans/新闻/2126723/今年-第四位-法国-总理-巴鲁\\nCONTENT: 自马克龙于2017年上台以来，巴鲁已是法国第六位总理，单是2024年已是第四任，是法国数十年来从未出现过的行政不稳定性。 ... 增加的背景下，赤字 ...\\n--------------------------------------------------\\n[7]:\\nTITLE: 马克龙任命弗朗索瓦·贝鲁为新任法国总理 - 观察者网\\nURL: https://www.guancha.cn/internation/2024_12_13_758742.shtml\\nCONTENT: 弗朗索瓦·贝鲁是法国今年的第四位总理，前任法国总理巴尼耶当地时间12月5日向马克龙递交了辞呈，上任仅三个月后就下台。 目前，法国政坛正因议会分裂而陷入日益严重的政治危机，马克龙希望避免新政府面临同样的命运。 本文系观察者网独家稿件，未经 ...\\n--------------------------------------------------\\n[8]:\\nTITLE: 马克龙任命中间派政坛老手弗朗索瓦·贝鲁为法国新总理\\nURL: https://www.voachinese.com/a/france-s-macron-names-veteran-centrist-ally-bayrou-as-prime-minister-20241213/7900260.html\\nCONTENT: 法国总统埃玛纽埃尔·马克龙（Emmanuel Macron）星期五（12月13日）提名前法国司法部长弗朗索瓦·贝鲁（Francois Bayrou）为他2024年内的第四位总理，以求 ...\\n--------------------------------------------------\\n[9]:\\nTITLE: 新华社快讯：法国总统马克龙任命弗朗索瓦·贝鲁为新总理-新华网\\nURL: https://www.news.cn/world/20241213/d0b05e0d92db4bdca5a5a892e1bf6871/c.html\\nCONTENT: 新华社快讯：法国总统马克龙任命弗朗索瓦·贝鲁为新总理 2024-12-13 19:45:03 来源：新华网 新华社快讯：据法国媒体13日报道，法国总统马克龙任命民主运动党主席弗朗索瓦·贝鲁为新总理。\\n--------------------------------------------------\\n[10]:\\nTITLE: 马克龙任命新总理 贝鲁能否成功破局？ - 新浪网\\nURL: https://news.sina.cn/2024-12-13/detail-incziqvr5729997.d.html\\nCONTENT: 当地时间12月13日，法国总统马克龙任命弗朗索瓦·贝鲁为新一任总理，以接替其前任米歇尔·巴尼耶。 马克龙于5日接受前总理巴尼耶的辞呈，巴尼耶政府也成为法兰西第五共和国任期最短的政府。 弗朗索瓦·贝鲁是谁？ 弗朗索瓦·贝鲁（资料图）\\n--------------------------------------------------\', \'法国总理\': \'\\nQuery: 法国总理\\nSearch Results:\\n--------------------------------------------------\\n[1]:\\nTITLE: 法国总理列表 - 维基百科，自由的百科全书\\nURL: https://zh.wikipedia.org/wiki/法国总理列表\\nCONTENT: 法国总理 （法語：Premier ministre français），為 法兰西第五共和国 政府首脑 （国家元首 是 法国总统）。在不同的历史时期，法国政府首脑的称呼也各不相同。在 法兰西第三 、 第四共和国 时期，政府首脑称作部长会议主席（Président du Conseil des Ministres，简称会议主席，Président du Conseil）。\\n--------------------------------------------------\\n[2]:\\nTITLE: 法国新总理贝鲁(Francois Bayrou)呼吁分裂的法国"和解"\\nURL: https://www.rfi.fr/cn/专栏检索/要闻分析/20241213-法国新总理贝鲁-francois-bayrou-呼吁分裂的法国-和解\\nCONTENT: 在巴尼耶政府被议会极左和极右两派合力"推翻"9天后，法国总统马克龙周五中午任命中派政治领袖贝鲁(Francois Bayrou)为新任总理。傍晚17点过，在 ...\\n--------------------------------------------------\\n[3]:\\nTITLE: 法国总理府举行交接仪式，弗朗索瓦·贝鲁正式担任总理\\nURL: https://www.guancha.cn/internation/2024_12_14_758763.shtml\\nCONTENT: 当地时间12月13日下午，法国总理府举行交接仪式，弗朗索瓦·贝鲁正式接替米歇尔·巴尼耶担任法国政府总理一职。 当天稍早前，法国总统马克龙任命弗朗索瓦·贝鲁为新一任法国总理。\\n--------------------------------------------------\\n[4]:\\nTITLE: 法国总统马克龙将于周五任命新总理 - Aljazeera\\nURL: https://chinese.aljazeera.net/news/2024/12/13/法国总统马克龙将于周五任命新总理\\nCONTENT: 法国总统埃马纽埃尔·马克龙办公室表示，他将于周五上午任命新总理。 爱丽舍宫周四在马克龙从波兰提前返回后表示，"将于明天早上公布任命总理的声明。" 新任总理将接替米歇尔·巴尼耶。巴尼耶上周辞职，原因是极右翼和左翼议员投票推翻了他的政府，使法国陷入六个月内第二次重大政治 ...\\n--------------------------------------------------\\n[5]:\\nTITLE: 马克龙任命弗朗索瓦·贝鲁为新任法国总理 - 央视网\\nURL: https://news.cctv.com/2024/12/13/ARTIBbyGmPBVSkzU3WUUvT6E241213.shtml\\nCONTENT: 当地时间13日，法国总统马克龙任命弗朗索瓦·贝鲁为新任法国总理。 弗朗索瓦·贝鲁现年73岁，为法国中间派政党法国民主运动党主席。 本月2日，法国上一任总理巴尼耶动用宪法相关机制，试图不经国民议会投票而通过预算案，国民议会中的左翼和极右翼议员随后对巴尼耶政府发起弹劾。国民议会4 ...\\n--------------------------------------------------\\n[6]:\\nTITLE: 贝鲁被任命为法国新总理 - 新华网\\nURL: https://www.news.cn/world/20241213/96c1f51e9b274665bb1517f08bc6ba09/c.html\\nCONTENT: 据法国媒体报道，马克龙与贝鲁12日晚进行了通话，13日上午，马克龙在总统府接见贝鲁并再次进行交谈。 马克龙随后宣布了任命决定。 贝鲁成为今年以来的第四位法国总理。 12月13日，在法国巴黎，巴尼耶（前左）与弗朗索瓦·贝鲁（前右）出席权力交接仪式。\\n--------------------------------------------------\\n[7]:\\nTITLE: 贝鲁被任命为法国新总理-中新网 - 中国新闻网\\nURL: https://www.chinanews.com.cn/gj/2024/12-13/10336107.shtml\\nCONTENT: 中新社巴黎12月13日电 (记者 李洋)法国总统马克龙13日任命民主运动党主席弗朗索瓦·贝鲁为新总理。 该任命于当天中午对外公布。法国官方发布简短新闻公报，确认了马克龙的相关任命。马克龙当天上午接见贝鲁，法国舆论 ...\\n--------------------------------------------------\\n[8]:\\nTITLE: 马克龙任命弗朗索瓦·贝鲁为新任法国总理 - 观察者网\\nURL: https://m.guancha.cn/internation/2024_12_13_758742.shtml\\nCONTENT: 据法国媒体报道，当地时间13日，法国总统马克龙宣布，任命弗朗索瓦·贝鲁为新任法国总理。 英国《卫报》报道，弗朗索瓦·贝鲁现年73岁，来自法国西南部，现为法国中间派"民主运动党"的主席，曾担任法国教育部长，也是法国西南部城市波城的市长。\\n--------------------------------------------------\\n[9]:\\nTITLE: 贝鲁担任法国新任总理，法媒：马克龙长期盟友"终于获得机会"\\nURL: https://news.sina.com.cn/w/2024-12-14/doc-inczkmzf5289622.shtml\\nCONTENT: [环球时报综合报道]"贝鲁：马克龙的长期盟友如今面临最大的挑战。"法新社13日刊文称，现年73岁的贝鲁是法国民主运动党领导人。该党与马克龙 ...\\n--------------------------------------------------\'}'}]
+    client = OpenAI()
 
-    ## 中间是对模型的调用逻辑：
-    # from openai import OpenAI
-    # client = OpenAI()
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": message}
+            ]
+        )
+        
+        response = completion.choices[0].message
 
-    # completion = client.chat.completions.create(
-    # model="gpt-4o-mini",
-    # messages=[
-    #     {"role": "developer", "content": "You are a helpful assistant."},
-    #     {"role": "user", "content": "Hello!"}
-    # ]
-    # )
+        # TODO: Store conversation in database
+        # Add database logic here to store user_id, message and response
 
-    # print(completion.choices[0].message)
+        return {"response": response}
 
-    # TODO 将对话记录存储到 Conversations 数据库的表中
-    return {"response": "OpenAI response"}   # 要求的返回的是completion.choices[0].message
+    except Exception as e:
+        return {"error": str(e)}
