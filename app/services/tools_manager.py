@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from fastapi.routing import APIRoute
 from ..db.database import Tool as DBTool  # 明确指定数据库Tool的别名
 from ..api.tools import router as tools_router
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from ..db.database import Base
 from .tool_schema import ToolSchema  # 改为导入ToolSchema
 
 logger = logging.getLogger(__name__)
@@ -31,6 +34,7 @@ class ToolManager:
         for route in tool_routes:
             tool_name = route.endpoint.__name__
             schema = ToolSchema.create_schema_from_function(route.endpoint)  # 使用新的类名
+            print(schema)
             source_code = inspect.getsource(route.endpoint)
             
             existing_tool = db.query(DBTool).filter(
@@ -81,4 +85,10 @@ class ToolManager:
     @classmethod
     def get_all_schemas(cls) -> List[Dict]:
         """Get all tool schemas"""
-        return list(cls._schemas.values())
+        # 注意这里要把所有schema包装成列表返回
+        return [
+            {
+                "type": "function",
+                "function": schema
+            } for schema in cls._schemas.values()
+        ]

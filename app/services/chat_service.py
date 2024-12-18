@@ -32,12 +32,7 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
     )
 
     # Get available tools and their schemas
-    available_tools = []
-    for tool_name in ToolManager.get_available_tools():
-        tool_method = ToolManager.get_tool(tool_name)
-        if tool_method:
-            tool_schemas = ToolManager.get_or_create_tool_schema(tool_method)
-            available_tools.extend(tool_schemas)
+    available_tools = ToolManager.get_all_schemas() 
 
     # Create chat completion with tools
     formatted_messages = [msg.dict(exclude_none=True) for msg in messages]
@@ -77,7 +72,11 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
             })
 
             # Execute tool if available
-            tool_method = ToolManager.get_tool(method_name)
+            tool_method = ToolManager.get_tool(method_name) # 请注意这里是直接调用了端点函数endpoint
+            ## 解释上面直接调用端点函数
+            # 绕过了 FastAPI 的路由系统，跳过了 HTTP 请求/响应周期，没有经过 FastAPI 的中间件处理(如认证、错误处理等)，执行速度更快(因为少了网络请求开销)，直接在内存中操作，使用同一个进程
+            # TODO 但是注意：如果将来需要添加通用的请求处理逻辑(如认证、日志等)，直接调用可能会绕过这些重要的处理步骤。
+
             if tool_method:
                 try:
                     method_result = await tool_method(**method_args_dict)
