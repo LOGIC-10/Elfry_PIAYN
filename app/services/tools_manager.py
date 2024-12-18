@@ -47,12 +47,12 @@ class ToolManager:
                     existing_tool.json_schema != schema): # 如果数据库中的工具和代码中现在的工具不一致，说明工具有更新，对应的也要更新数据库
                     existing_tool.source_code = source_code
                     existing_tool.json_schema = schema
-                    existing_tool.description = schema["description"]
+                    existing_tool.description = schema["function"]["description"]
                     db.commit()
             else: # 如果数据库中没有这个工具，说明是新工具，需要添加到数据库
                 new_tool = DBTool(
                     name=tool_name,
-                    description=schema["description"],
+                    description=schema["function"]["description"],
                     source_type="python",
                     json_schema=schema,
                     source_code=source_code
@@ -85,10 +85,5 @@ class ToolManager:
     @classmethod
     def get_all_schemas(cls) -> List[Dict]:
         """Get all tool schemas"""
-        # 注意这里要把所有schema包装成列表返回
-        return [
-            {
-                "type": "function",
-                "function": schema
-            } for schema in cls._schemas.values()
-        ]
+        # 直接返回已经格式化好的 schema 列表
+        return list(cls._schemas.values())

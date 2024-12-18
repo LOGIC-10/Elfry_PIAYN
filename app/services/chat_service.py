@@ -36,16 +36,23 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
 
     # Create chat completion with tools
     formatted_messages = [msg.dict(exclude_none=True) for msg in messages]
-    conversation_history = []
-
+    
     while True:
         completion = client.chat.completions.create(
             model=model_name,
             messages=formatted_messages,
-            tools=available_tools  # Add tools parameter
+            tools=available_tools
         )
         
         response = completion.choices[0].message
+        logger.info(f"\n\nModel response: {response.content}")  
+
+        # 先将模型的响应添加到消息列表中
+        formatted_messages.append({
+            "role": "assistant",
+            "content": response.content if response.content else None,
+            "tool_calls": response.tool_calls if response.tool_calls else None
+        })
         
         # If no tool calls, break the loop
         if not response.tool_calls:
@@ -53,23 +60,10 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
 
         # Process tool calls
         for tool_call in response.tool_calls:
-            logger.info(colorize_message(f"Tool call detected: {tool_call}", "blue"))
+            logger.info(f"Processing tool call: {tool_call.function.name}")
             method_name = tool_call.function.name
             method_args = tool_call.function.arguments
             method_args_dict = json.loads(method_args)
-
-            # Store tool call in conversation history
-            conversation_history.append({
-                "role": "assistant",
-                "tool_calls": [{
-                    "function": {
-                        "arguments": method_args,
-                        "name": method_name
-                    },
-                    "id": tool_call.id,
-                    "type": "function"
-                }]
-            })
 
             # Execute tool if available
             tool_method = ToolManager.get_tool(method_name) # 请注意这里是直接调用了端点函数endpoint
@@ -80,8 +74,9 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
             if tool_method:
                 try:
                     method_result = await tool_method(**method_args_dict)
+                    logger.info(f"Tool {tool_call.function.name} execution result: {method_result}")
                     
-                    # Add tool response to messages
+                    # Add tool execution result to messages
                     formatted_messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -89,13 +84,6 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         "content": str(method_result)
                     })
                     
-                    # Store tool response in conversation history
-                    conversation_history.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "name": method_name,
-                        "content": str(method_result)
-                    })
                 except Exception as e:
                     logger.error(f"Tool execution error: {e}")
                     formatted_messages.append({
@@ -105,17 +93,16 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         "content": f"Error: {str(e)}"
                     })
 
-    # Store final conversation
+    # Store final conversation with all messages
     conversation = Conversation(
         user_id=user_id,
         request_data={"messages": [msg.dict() for msg in messages], "model": model_name},
         response_data={
             "response": response.model_dump(),
-            "tool_calls_history": conversation_history  # This will only be stored in DB
+            "messages": formatted_messages  # Store all messages including tool interactions
         }
     )
     db.add(conversation)
     db.commit()
 
-    # Return only the final response
-    return {"content": response.content}  # Or format as needed for the frontend
+    return {"content": response.content}
