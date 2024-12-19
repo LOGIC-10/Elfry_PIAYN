@@ -94,6 +94,7 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
             elif delta.content: # 如果没有工具调用，就是处理正常的对话内容
                 content_chunk = delta.content
                 full_content += content_chunk
+                print(content_chunk)
                 yield content_chunk  # 流式输出内容
 
 
