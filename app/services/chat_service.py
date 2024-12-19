@@ -51,7 +51,6 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
     
     while True:
         print(formatted_messages)
-        print(available_tools)
         completion = client.chat.completions.create(
             model=model_name,
             messages=formatted_messages,
@@ -63,16 +62,23 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
         full_content = ""
         function_name = None
         function_args = ""
-        tool_calls_list = None # 应对并行工具调用，建立一个id，工具名字、工具参数、type的映射存储列表
+        tool_calls_list = [] # 应对并行工具调用，建立一个id，工具名字、工具参数、type的映射存储列表
 
         # 处理流式响应
         for chunk in completion:
             delta = chunk.choices[0].delta
+            # from IPython import embed; embed()
+            # print("delta:", delta)
+            print("chunk.choices[0]:\n", chunk.choices[0])
             # 处理工具调用信息
             if delta.tool_calls:
+                print("delta.tool_calls:", delta.tool_calls)
                 tool_call = delta.tool_calls[0]
                 if tool_call.function:
                     if tool_call.function.name and tool_call.id: # 注意流式输出只有第一个token带有工具的名字（如果并行tool_calls的话有被覆盖的风险）。这两个属性同时出现的时候代表一个新的工具调用开始
+
+                        print(f"\n\nDetecting tool call, the id is {tool_call.id} and the function name is {tool_call.function.name}\n\n")
+
                         function_name = tool_call.function.name # 这是每个工具specific的
                         tool_call_id = tool_call.id # 这也是每个工具specific的
                         tool_call_type = tool_call.type # 这里默认基本都是 function
@@ -86,20 +92,25 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         }
                     if tool_call.function.arguments:
                         function_args += tool_call.function.arguments
-
-                    if chunk.choices[0].finish_reason and chunk.choices[0].finish_reason == "tool_calls":
-                        tool_call_dict["function"]["arguments"] = function_args # 更新完整的工具调用参数
-                        tool_calls_list.append(tool_call_dict) # 将完整的工具调用信息添加到列表
-
+                        print(function_args)
+                        
             elif delta.content: # 如果没有工具调用，就是处理正常的对话内容
                 content_chunk = delta.content
                 full_content += content_chunk
                 print(content_chunk)
                 yield content_chunk  # 流式输出内容
 
+            # Move the finish_reason check here, outside the delta.tool_calls block
+            print("chunk.choices[0].finish_reason:", chunk.choices[0].finish_reason)
+            if chunk.choices[0].finish_reason == "tool_calls":
+
+                print(f"\n\nCurrent Tool call finished...the id is {tool_call_id} and the function name is {function_name}\n\n")
+                tool_call_dict["function"]["arguments"] = function_args
+                tool_calls_list.append(tool_call_dict)
 
         # 检查是否有工具名称
         if tool_calls_list:
+            print("tool_calls_list:", tool_calls_list)
             # 添加工具调用信息到消息列表
             formatted_messages.append({
                 "role": "assistant",
@@ -116,6 +127,8 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                 if tool_method:
                     try:
                         method_result = await tool_method(**method_args_dict)
+
+                        print("method_resultz:", method_result)
                         # 将工具结果添加到消息列表
                         formatted_messages.append({ # 这里记录的是 tool 的执行结果
                             "role": "tool",
@@ -140,7 +153,7 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         "content": f"Error: Tool '{function_name}' not found"
                     })
 
-                continue  # 继续下一个循环
+                # continue  # 继续下一个循环
 
         else:
             # 没有工具调用，添加完整的对话响应内容
