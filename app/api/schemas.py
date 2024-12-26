@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict
 from datetime import datetime
 
@@ -72,3 +72,45 @@ class ToolResponse(ToolCreate):
 
     class Config:
         from_attributes = True
+
+class CalendarEventRequest(BaseModel):
+    """
+    A Pydantic model representing a calendar event creation request.
+
+    Attributes:
+        title (str): Event title
+        begin_time (str): Event start time
+        end_time (str): Event end time
+        time_zone (str): Event timezone
+        remind_time (str): Reminder time
+        location (str, optional): Event location
+        online_link (str, optional): Online meeting link
+        event_type (str, optional): Type of event
+        related_people (List[str], optional): List of people related to the event
+        appendix (List[str], optional): List of appendices
+        repeat (Dict, optional): Event repetition settings
+        comment (str, optional): Event comments
+        priority (str, optional): Event priority level
+    All datetime strings must be in format 'yyyy-MM-dd HH:mm:ss'
+    """
+    title: str
+    begin_time: str
+    end_time: str
+    time_zone: str
+    remind_time: str
+    location: str = ""
+    online_link: str = ""
+    event_type: str = ""
+    related_people: Optional[List[str]] = None
+    appendix: Optional[List[str]] = None
+    repeat: Optional[Dict] = None
+    comment: str = ""
+    priority: str = "normal"
+
+    @validator('begin_time', 'end_time', 'remind_time')
+    def validate_datetime_format(cls, v):
+        try:
+            datetime.strptime(v, '%Y-%m-%d %H:%M:%S')
+            return v
+        except ValueError:
+            raise ValueError('Datetime must be in format yyyy-MM-dd HH:mm:ss')

@@ -97,11 +97,11 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
             elif delta.content: # 如果没有工具调用，就是处理正常的对话内容
                 content_chunk = delta.content
                 full_content += content_chunk
-                print(content_chunk)
+                print(f"\ncontent_chunk:\n{content_chunk}\n")
                 yield content_chunk  # 流式输出内容
 
             # Move the finish_reason check here, outside the delta.tool_calls block
-            print("chunk.choices[0].finish_reason:", chunk.choices[0].finish_reason)
+            # print("chunk.choices[0].finish_reason:", chunk.choices[0].finish_reason)
             if chunk.choices[0].finish_reason == "tool_calls":
 
                 print(f"\n\nCurrent Tool call finished...the id is {tool_call_id} and the function name is {function_name}\n\n")
@@ -110,7 +110,7 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
 
         # 检查是否有工具名称
         if tool_calls_list:
-            print("tool_calls_list:", tool_calls_list)
+            print("tool_calls_list detected:", tool_calls_list)
             # 添加工具调用信息到消息列表
             formatted_messages.append({
                 "role": "assistant",
@@ -153,7 +153,6 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         "content": f"Error: Tool '{function_name}' not found"
                     })
 
-                # continue  # 继续下一个循环
 
         else:
             # 没有工具调用，添加完整的对话响应内容

@@ -17,8 +17,8 @@ async def startup_event():
     try:
         # 每次启动服务的时候，初始化工具
         ToolManager.initialize_tools(db) # 现在所有的工具schema都在ToolManager._schemas中
-        # print("Available tools:", ToolManager.get_available_tools())
-        # print("\nAll schemas:", ToolManager.get_all_schemas())
+        print("Available tools:", ToolManager.get_available_tools())
+        print("\nAll schemas:", ToolManager.get_all_schemas())
         # print("\n\n\n_tools:", ToolManager._tools)
     finally:
         db.close()

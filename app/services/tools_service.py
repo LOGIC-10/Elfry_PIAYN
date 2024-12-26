@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from typing import Dict, Any, Union
 import asyncio
 from urllib.parse import urlparse
+from datetime import datetime
 
 async def search(query: str) -> Dict[str, Any]:
     """Search implementation"""
@@ -66,5 +67,57 @@ async def calculate(expression: str) -> Dict[str, Union[bool, str, float]]:
             "success": True,
             "result": result
         }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
+async def create_calendar_event(
+    title: str,
+    begin_time: str,
+    end_time: str,
+    time_zone: str,
+    remind_time: str,
+    location: str = "",
+    online_link: str = "",
+    event_type: str = "",
+    related_people: list = None,
+    appendix: list = None,
+    repeat: dict = None,
+    comment: str = "",
+    priority: str = "normal"
+) -> Dict[str, Any]:
+    """Create a calendar event with the specified parameters"""
+    try:
+        # 转换时间格式为 "yyyy-MM-dd HH:mm:ss"
+        def format_datetime(dt_str: str) -> str:
+            # 尝试解析各种可能的时间格式
+            for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S']:
+                try:
+                    dt = datetime.strptime(dt_str, fmt)
+                    return dt.strftime('%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    continue
+            return dt_str  # 如果都解析失败，返回原字符串
+
+        event = {
+            "title": title,
+            "begin_time": format_datetime(begin_time),
+            "end_time": format_datetime(end_time),
+            "time_zone": time_zone,
+            "remind_time": format_datetime(remind_time),
+            "location": location,
+            "online_link": online_link,
+            "type": event_type,
+            "related_people": related_people or [],
+            "appendix": appendix or [],
+            "repeat": repeat or {
+                "is_repeat": False,
+                "begin_time": "",
+                "end_time": "",
+                "frequency": ""
+            },
+            "comment": comment,
+            "priority": priority
+        }
+        return {"success": True, "event": event}
     except Exception as e:
         return {"success": False, "error": str(e)}
