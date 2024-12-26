@@ -4,6 +4,7 @@ from typing import Dict, Any, Union
 import asyncio
 from urllib.parse import urlparse
 from datetime import datetime
+import uuid
 
 async def search(query: str) -> Dict[str, Any]:
     """Search implementation"""
@@ -87,6 +88,9 @@ async def create_calendar_event(
 ) -> Dict[str, Any]:
     """Create a calendar event with the specified parameters"""
     try:
+        # 生成事件的唯一标识
+        event_id = str(uuid.uuid4())
+
         # 转换时间格式为 "yyyy-MM-dd HH:mm:ss"
         def format_datetime(dt_str: str) -> str:
             # 尝试解析各种可能的时间格式
@@ -99,6 +103,7 @@ async def create_calendar_event(
             return dt_str  # 如果都解析失败，返回原字符串
 
         event = {
+            "event_id": event_id,  # 添加事件ID
             "title": title,
             "begin_time": format_datetime(begin_time),
             "end_time": format_datetime(end_time),
