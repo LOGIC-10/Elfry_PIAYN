@@ -7,6 +7,17 @@ import base64
 from io import BytesIO
 from PIL import Image
 from typing import List
+import logging
+import tiktoken
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    filename='gemini_responses.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
 app = FastAPI()
 
 
@@ -16,7 +27,12 @@ class ImageRequest(BaseModel):
     prompt: str
     images: List[str]  # base64 encoded image
     temperature: float = 0.7
-    max_tokens: int = 4096
+    max_tokens: int = 8192
+
+def tokenize(text):
+    encoding = tiktoken.get_encoding("cl100k_base")
+    tokens = encoding.encode(text)
+    return len(tokens)
 
 @app.post("/generate")
 async def generate_content(request: ImageRequest):
@@ -44,6 +60,16 @@ async def generate_content(request: ImageRequest):
                 max_output_tokens=request.max_tokens,
             )
         )
+
+        # Get response text and calculate tokens
+        response_text = response.text
+        token_count = tokenize(response_text)
+        # Log the response and token count
+        logging.info(f"Prompt: {request.prompt}")
+        logging.info(f"Response: {response_text}")
+        logging.info(f"Token count: {token_count}")
+        logging.info("-" * 50)
+
         # 返回结果
         return {
             "status": "success",
@@ -54,12 +80,12 @@ async def generate_content(request: ImageRequest):
             "error": None
         }
     except ValueError as e:
-        # return HTTPException(status_code=400, detail=str(e))
+        logging.error(f"ValueError: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         # 添加日志记录
-        print(f"Unexpected error: {str(e)}")
+        logging.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8900)

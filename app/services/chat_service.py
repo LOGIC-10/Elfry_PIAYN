@@ -20,6 +20,8 @@ def colorize_message(msg: str, color: str) -> str:
     }
     return f"{colors.get(color, '')}{msg}{colors['end']}"
 
+def convert_chunk_to_json(chunk): return {"id": chunk.id, "object": chunk.object, "created": chunk.created, "model": chunk.model, "system_fingerprint": chunk.system_fingerprint, "choices": [{"index": choice.index, "delta": choice.delta.dict() if choice.delta else {}, "logprobs": choice.logprobs, "finish_reason": choice.finish_reason} for choice in chunk.choices]}
+
 async def process_chat(db: Session, user_id: int, messages: List[Message], model_name: str = "gpt-4o-mini"):
     # Get model configuration
     model_config = get_model_config(db, model_name)
@@ -69,7 +71,7 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
             delta = chunk.choices[0].delta
             # from IPython import embed; embed()
             # print("delta:", delta)
-            print("chunk.choices[0]:\n", chunk.choices[0])
+            # print("chunk.choices[0]:\n", chunk.choices[0])
             # 处理工具调用信息
             if delta.tool_calls:
                 print("delta.tool_calls:", delta.tool_calls)
@@ -94,14 +96,23 @@ async def process_chat(db: Session, user_id: int, messages: List[Message], model
                         function_args += tool_call.function.arguments
                         print(function_args)
                         
-            elif delta.content: # 如果没有工具调用，就是处理正常的对话内容
-                content_chunk = delta.content
-                full_content += content_chunk
-                print(f"\ncontent_chunk:\n{content_chunk}\n")
-                yield content_chunk  # 流式输出内容
+            # elif delta.content: # 如果没有工具调用，就是处理正常的对话内容
+            else: # 如果没有工具调用，就是处理正常的对话内容
+                if delta.content == None:
+                    yield_result = json.dumps(convert_chunk_to_json(chunk),ensure_ascii=False)
+                    yield "data: "+str(yield_result)
+                else:
+                    content_chunk = delta.content
+                    full_content += content_chunk
+
+                yield_result = json.dumps(convert_chunk_to_json(chunk),ensure_ascii=False)
+                print("yield_result:\n", yield_result)
+                yield "data: "+str(yield_result)
+                # print("chunk:\n", chunk)
+                # yield chunk
 
             # Move the finish_reason check here, outside the delta.tool_calls block
-            # print("chunk.choices[0].finish_reason:", chunk.choices[0].finish_reason)
+            print("chunk.choices[0].finish_reason:", chunk.choices[0].finish_reason)
             if chunk.choices[0].finish_reason == "tool_calls":
 
                 print(f"\n\nCurrent Tool call finished...the id is {tool_call_id} and the function name is {function_name}\n\n")
